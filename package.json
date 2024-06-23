@@ -31,7 +31,7 @@
 	"description": "A plugin for the serverless framework to automatically tag all resources and create a resource group.",
 	"private": false,
 	"peerDependencies": {
-		"serverless": "^3.38.0"
+		"serverless": "^3.0.0"
 	},
 	"engines": {
 		"node": "20.x"
