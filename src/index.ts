@@ -1,6 +1,5 @@
 import Serverless from 'serverless';
 import Plugin, { Logging } from 'serverless/classes/Plugin';
-import fetch from 'node-fetch';
 import { CloudFormationResources } from 'serverless/plugins/aws/provider/awsProvider';
 
 interface Tag {
@@ -34,13 +33,14 @@ class ServerlessResourceTagPlugin implements Plugin {
       const response = await fetch(
         'https://d1uauaxba7bl26.cloudfront.net/latest/gzip/CloudFormationResourceSpecification.json',
       );
-      const data = await response.json();
-      const resourceTypes: {
-        [key: string]: { Properties?: { [key: string]: unknown } };
-      } = data.ResourceTypes;
+      const data = (await response.json()) as {
+        ResourceTypes: {
+          [key: string]: { Properties?: { [key: string]: unknown } };
+        };
+      };
 
       for (const [resourceType, resourceDetails] of Object.entries(
-        resourceTypes,
+        data.ResourceTypes,
       )) {
         if ('Tags' in (resourceDetails.Properties || {})) {
           this.taggableResourceTypes.add(resourceType);
