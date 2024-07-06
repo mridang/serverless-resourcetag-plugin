@@ -6,6 +6,8 @@ provider:
   stackTags:
       foo: bar
       owner: team-a
+  tags:
+      framework: nodejs
 
 plugins:
   - ../../../src

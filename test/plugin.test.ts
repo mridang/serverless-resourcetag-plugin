@@ -53,8 +53,7 @@ describe('plugin tests', () => {
           expect(resource.Properties).toHaveProperty(
             'Tags',
             expect.arrayContaining([
-              { Key: 'foo', Value: 'bar' },
-              { Key: 'owner', Value: 'team-a' },
+              { Key: 'framework', Value: 'nodejs' },
               { Key: 'sls:meta:project', Value: 'simple-service' },
             ]),
           );

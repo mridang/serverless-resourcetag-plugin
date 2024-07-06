@@ -68,7 +68,8 @@ class ServerlessResourceTagPlugin implements Plugin {
     }
 
     const customTags: { [key: string]: string } = {
-      ...this.serverless.service.provider.stackTags,
+      // @ts-expect-error since the tags doesn't exist in the types yet
+      ...this.serverless.service.provider.tags,
       'sls:meta:project': serviceName,
     };
 
