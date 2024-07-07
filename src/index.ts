@@ -96,6 +96,9 @@ class ServerlessResourceTagPlugin implements Plugin {
         }
 
         const existingTags: Tag[] = resource.Properties.Tags!;
+        if (!Array.isArray(existingTags)) {
+          return;
+        }
 
         resource.Properties.Tags = [
           ...existingTags.filter(
@@ -127,7 +130,7 @@ class ServerlessResourceTagPlugin implements Plugin {
     };
 
     this.logging.log.notice(
-      `Tags have been added to all ${resCnt} resources and resource group created`,
+      `Tags have been added to all ${resCnt.length} resources and resource group created`,
     );
   }
 }
