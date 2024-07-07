@@ -76,6 +76,15 @@ class ServerlessResourceTagPlugin implements Plugin {
     const resources: CloudFormationResources =
       this.serverless.service.provider.compiledCloudFormationTemplate.Resources;
 
+    const newTags: Tag[] = Object.keys(customTags).map((key) => ({
+      Key: key,
+      Value: customTags[key],
+    }));
+
+    const resCnt = Object.values(resources).filter((res) =>
+      this.taggableResourceTypes.has(res.Type),
+    );
+
     Object.keys(resources).forEach((resourceKey) => {
       const resource = resources[resourceKey];
       if (this.taggableResourceTypes.has(resource.Type)) {
@@ -87,10 +96,6 @@ class ServerlessResourceTagPlugin implements Plugin {
         }
 
         const existingTags: Tag[] = resource.Properties.Tags!;
-        const newTags: Tag[] = Object.keys(customTags).map((key) => ({
-          Key: key,
-          Value: customTags[key],
-        }));
 
         resource.Properties.Tags = [
           ...existingTags.filter(
@@ -122,7 +127,7 @@ class ServerlessResourceTagPlugin implements Plugin {
     };
 
     this.logging.log.notice(
-      'Tags have been added to all taggable resources and resource group created',
+      `Tags have been added to all ${resCnt} resources and resource group created`,
     );
   }
 }
