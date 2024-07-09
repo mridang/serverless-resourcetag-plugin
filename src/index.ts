@@ -1,6 +1,13 @@
 import Serverless from 'serverless';
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore since the types are broken
 import Plugin, { Logging } from 'serverless/classes/Plugin';
-import { CloudFormationResources } from 'serverless/plugins/aws/provider/awsProvider';
+import {
+  CloudFormationResource,
+  CloudFormationResources,
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore since the types are broken
+} from 'serverless/plugins/aws/provider/awsProvider';
 
 interface Tag {
   Key: string;
@@ -81,8 +88,8 @@ class ServerlessResourceTagPlugin implements Plugin {
       Value: customTags[key],
     }));
 
-    const resCnt = Object.values(resources).filter((res) =>
-      this.taggableResourceTypes.has(res.Type),
+    const resCnt = Object.values(resources).filter(
+      (res: CloudFormationResource) => this.taggableResourceTypes.has(res.Type),
     );
 
     Object.keys(resources).forEach((resourceKey) => {
@@ -135,4 +142,6 @@ class ServerlessResourceTagPlugin implements Plugin {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore since the types are broken
 export = ServerlessResourceTagPlugin;
