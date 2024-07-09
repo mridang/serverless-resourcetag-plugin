@@ -27,14 +27,14 @@ https://docs.aws.amazon.com/ARG/latest/userguide/resource-groups.html
 Install using NPM by using the following command
 
 ```sh
-npm install --save-dev serverless-resourcetag-plugin
+npm install --save-dev @mridang/serverless-resourcetag-plugin
 ```
 
 And then add the plugin to your `serverless.yml` file:
 
 ```yaml
 plugins:
-  - serverless-resourcetag-plugin
+  - @mridang/serverless-resourcetag-plugin
 ```
 
 A thorough guide on installing plugins can be found at
