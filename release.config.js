@@ -1,4 +1,6 @@
-export default {
+const packageJson = require('./package.json');
+
+module.exports = {
   branches: ['master'],
   plugins: [
     '@semantic-release/commit-analyzer',
@@ -27,6 +29,5 @@ export default {
       },
     ],
   ],
-  repositoryUrl:
-    'git+https://github.com/mridang/serverless-resourcetag-plugin.git',
+  repositoryUrl: packageJson.repository.url,
 };
