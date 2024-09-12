@@ -129,7 +129,7 @@ class ServerlessResourceTagPlugin implements Plugin {
       },
     };
 
-    this.logging.log.notice(
+    this.logging.log.success(
       `Tags have been added to all ${resCnt.length} resources and resource group created`,
     );
   }
