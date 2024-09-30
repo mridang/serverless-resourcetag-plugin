@@ -1,5 +1,7 @@
 import Serverless from 'serverless';
+// eslint-disable-next-line import/no-unresolved
 import Plugin, { Logging } from 'serverless/classes/Plugin';
+// eslint-disable-next-line import/no-unresolved
 import { CloudFormationResources } from 'serverless/plugins/aws/provider/awsProvider';
 
 interface Tag {
