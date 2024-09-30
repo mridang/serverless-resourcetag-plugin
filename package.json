@@ -52,7 +52,7 @@
 		"@serverless/test": "^11.1.1",
 		"@tsconfig/node20": "latest",
 		"@types/jest": "^29.5.12",
-		"@types/node": "^20.3.2",
+		"@types/node": "^22.7.4",
 		"@types/serverless": "^3.12.22",
 		"eslint": "^8.57.1",
 		"jest": "^29.7.0",
