@@ -4,10 +4,10 @@ provider:
   name: aws
   runtime: nodejs20.x
   stackTags:
-      foo: bar
-      owner: team-a
+    foo: bar
+    owner: team-a
   tags:
-      framework: nodejs
+    framework: nodejs
 
 plugins:
   - ../../../src
