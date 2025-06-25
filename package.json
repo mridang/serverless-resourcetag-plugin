@@ -1,6 +1,6 @@
 {
   "name": "@mridang/serverless-resourcetag-plugin",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "scripts": {
     "prepack": "tsc",
     "build": "tsc",
