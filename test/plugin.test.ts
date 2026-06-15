@@ -3,11 +3,18 @@ import path from 'path';
 // @ts-expect-error since the types are missing
 import logEmitter from 'log/lib/emitter.js';
 import * as fs from 'node:fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { createRequire } from 'module';
 import {
   CloudFormationResource,
   CloudFormationResources,
   // eslint-disable-next-line import/no-unresolved
 } from 'serverless/plugins/aws/provider/awsProvider';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
 
 const logsBuffer: string[] = [];
 logEmitter.on(

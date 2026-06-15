@@ -137,4 +137,4 @@ class ServerlessResourceTagPlugin implements Plugin {
   }
 }
 
-export = ServerlessResourceTagPlugin;
+export default ServerlessResourceTagPlugin;
