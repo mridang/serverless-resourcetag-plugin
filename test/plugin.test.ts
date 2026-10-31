@@ -1,74 +1,68 @@
-import runServerless from '@serverless/test/run-serverless';
-import path, { dirname } from 'path';
-// @ts-expect-error since the types are missing
-import logEmitter from 'log/lib/emitter.js';
-import * as fs from 'node:fs';
-import { fileURLToPath } from 'url';
-import { createRequire } from 'module';
-import {
-  CloudFormationResource,
-  CloudFormationResources,
-} from 'serverless/plugins/aws/provider/awsProvider';
+import ServerlessResourceTagPlugin from '../src/index';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const require = createRequire(import.meta.url);
-
-const logsBuffer: string[] = [];
-logEmitter.on(
-  'log',
-  (event: { logger: { namespace: string }; messageTokens: string[] }) => {
-    if (
-      !event.logger.namespace.startsWith('serverless:lifecycle') &&
-      event.logger.namespace !== 'serverless'
-    ) {
-      logsBuffer.push(event.messageTokens[0]);
-    }
-  },
-);
+type Ctor = ConstructorParameters<typeof ServerlessResourceTagPlugin>;
 
 describe('plugin tests', () => {
-  it('should run resourcetag on package', async () => {
-    await runServerless(path.join(require.resolve('serverless'), '..', '..'), {
-      cwd: path.resolve(__dirname, 'fixtures', 'simple-service'),
-      command: 'package',
-    });
+  const originalFetch = globalThis.fetch;
 
-    const compiledTemplatePath = path.resolve(
-      __dirname,
-      'fixtures',
-      'simple-service',
-      '.serverless',
-      'cloudformation-template-update-stack.json',
-    );
-    const compiledTemplate = JSON.parse(
-      fs.readFileSync(compiledTemplatePath, 'utf-8'),
-    );
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
 
-    const resources: CloudFormationResources = compiledTemplate.Resources;
-    const taggedResourceTypes = new Set([
-      'AWS::Lambda::Function',
-      'AWS::S3::Bucket',
-      'AWS::Logs::LogGroup',
-      'AWS::IAM::Role',
-    ]);
-
-    Object.entries(resources).forEach(
-      ([, resource]: [string, CloudFormationResource]) => {
-        if (taggedResourceTypes.has(resource.Type)) {
-          expect(resource.Properties).toHaveProperty(
-            'Tags',
-            expect.arrayContaining([
-              { Key: 'framework', Value: 'nodejs' },
-              { Key: 'sls:meta:project', Value: 'simple-service' },
-            ]),
-          );
-        } else {
-          expect(resource.Properties).not.toHaveProperty('Tags');
-        }
+  it('should tag taggable resources and add the resource group', async () => {
+    globalThis.fetch = (async () => ({
+      json: async () => ({
+        ResourceTypes: {
+          'AWS::Lambda::Function': { Properties: { Tags: {} } },
+          'AWS::S3::Bucket': { Properties: { Tags: {} } },
+          'AWS::Logs::LogGroup': { Properties: { Tags: {} } },
+          'AWS::IAM::Policy': { Properties: {} },
+        },
+      }),
+    })) as unknown as typeof fetch;
+    const resources: Record<string, { Type: string; Properties?: object }> = {
+      Fn: { Type: 'AWS::Lambda::Function', Properties: { Tags: [] } },
+      Bucket: {
+        Type: 'AWS::S3::Bucket',
+        Properties: { Tags: [{ Key: 'owner', Value: 'team-a' }] },
       },
+      Logs: { Type: 'AWS::Logs::LogGroup' },
+      Policy: { Type: 'AWS::IAM::Policy', Properties: {} },
+    };
+    const serverless = {
+      service: {
+        service: 'simple-service',
+        provider: {
+          tags: { framework: 'nodejs' },
+          compiledCloudFormationTemplate: { Resources: resources },
+        },
+      },
+    };
+    const noop = () => undefined;
+    const logging = { log: { notice: noop, error: noop, success: noop } };
+    const plugin = new ServerlessResourceTagPlugin(
+      serverless as unknown as Ctor[0],
+      {} as Ctor[1],
+      logging as unknown as Ctor[2],
     );
 
+    await (plugin.hooks['initialize'] as () => Promise<void>)();
+    (
+      plugin.hooks[
+        'after:aws:package:finalize:mergeCustomProviderResources'
+      ] as () => void
+    )();
+
+    const expectedTags = [
+      { Key: 'framework', Value: 'nodejs' },
+      { Key: 'sls:meta:project', Value: 'simple-service' },
+    ];
+    expect(resources.Fn.Properties).toEqual({ Tags: expectedTags });
+    expect(resources.Bucket.Properties).toEqual({
+      Tags: [{ Key: 'owner', Value: 'team-a' }, ...expectedTags],
+    });
+    expect(resources.Logs.Properties).toEqual({ Tags: expectedTags });
+    expect(resources.Policy.Properties).not.toHaveProperty('Tags');
     expect(resources['ProjectResourceGroup']).toEqual({
       Type: 'AWS::ResourceGroups::Group',
       Properties: {
@@ -78,10 +72,7 @@ describe('plugin tests', () => {
           Query: {
             ResourceTypeFilters: ['AWS::AllSupported'],
             TagFilters: [
-              {
-                Key: 'sls:meta:project',
-                Values: ['simple-service'],
-              },
+              { Key: 'sls:meta:project', Values: ['simple-service'] },
             ],
           },
         },
