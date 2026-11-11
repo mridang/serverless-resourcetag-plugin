@@ -1,7 +1,11 @@
-import { readFileSync } from 'node:fs';
+/**
+ * @file Semantic-release configuration that publishes the npm package and its GitHub release.
+ */
+
+import { readFile } from 'node:fs/promises';
 
 const packageJson = JSON.parse(
-  readFileSync(new URL('package.json', import.meta.url), 'utf-8'),
+  await readFile(new URL('package.json', import.meta.url), 'utf8'),
 );
 
 export default {
