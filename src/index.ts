@@ -1,3 +1,7 @@
+/**
+ * @file Serverless Framework plugin that tags AWS resources and creates a project resource group.
+ */
+
 import Serverless from 'serverless';
 
 import Plugin, { Logging } from 'serverless/classes/Plugin';

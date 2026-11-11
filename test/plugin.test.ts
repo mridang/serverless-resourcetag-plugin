@@ -1,3 +1,7 @@
+/**
+ * @file Tests that the plugin tags taggable resources and adds the project resource group.
+ */
+
 import ServerlessResourceTagPlugin from '../src/index';
 
 type Ctor = ConstructorParameters<typeof ServerlessResourceTagPlugin>;
