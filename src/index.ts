@@ -2,11 +2,12 @@
  * @file Serverless Framework plugin that tags AWS resources and creates a project resource group.
  */
 
-import Serverless from 'serverless';
+import type Serverless from 'serverless';
 
-import Plugin, { Logging } from 'serverless/classes/Plugin';
+import type { Logging } from 'serverless/classes/Plugin';
+import type Plugin from 'serverless/classes/Plugin';
 
-import { CloudFormationResources } from 'serverless/plugins/aws/provider/awsProvider';
+import type { CloudFormationResources } from 'serverless/plugins/aws/provider/awsProvider';
 
 interface Tag {
   Key: string;
@@ -16,7 +17,7 @@ interface Tag {
 class ServerlessResourceTagPlugin implements Plugin {
   public readonly hooks: Plugin.Hooks = {};
   public readonly name: string = 'serverless-resourcetag-plugin';
-  private taggableResourceTypes: Set<string> = new Set();
+  private readonly taggableResourceTypes = new Set<string>();
 
   constructor(
     private readonly serverless: Serverless,
@@ -73,9 +74,12 @@ class ServerlessResourceTagPlugin implements Plugin {
       return;
     }
 
+    // The Serverless typings omit the provider's tags, so the source is typed once here.
+    const { tags: providerTags } = this.serverless.service.provider as {
+      tags?: { [key: string]: string };
+    };
     const customTags: { [key: string]: string } = {
-      // @ts-expect-error since the tags doesn't exist in the types yet
-      ...this.serverless.service.provider.tags,
+      ...providerTags,
       'sls:meta:project': serviceName,
     };
 
@@ -101,7 +105,7 @@ class ServerlessResourceTagPlugin implements Plugin {
           resource.Properties.Tags = [];
         }
 
-        const existingTags: Tag[] = resource.Properties.Tags!;
+        const existingTags: Tag[] = resource.Properties.Tags;
         if (!Array.isArray(existingTags)) {
           continue;
         }
@@ -116,7 +120,7 @@ class ServerlessResourceTagPlugin implements Plugin {
       }
     }
 
-    resources[`ProjectResourceGroup`] = {
+    resources.ProjectResourceGroup = {
       Type: 'AWS::ResourceGroups::Group',
       Properties: {
         Name: `${serviceName}-resource-group`,
