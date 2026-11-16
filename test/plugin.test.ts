@@ -2,7 +2,7 @@
  * @file Tests that the plugin tags taggable resources and adds the project resource group.
  */
 
-import ServerlessResourceTagPlugin from '../src/index';
+import ServerlessResourceTagPlugin from '../src/index.js';
 
 type Ctor = ConstructorParameters<typeof ServerlessResourceTagPlugin>;
 
@@ -46,16 +46,12 @@ describe('plugin tests', () => {
     const logging = { log: { notice: noop, error: noop, success: noop } };
     const plugin = new ServerlessResourceTagPlugin(
       serverless as unknown as Ctor[0],
-      {} as Ctor[1],
+      {},
       logging as unknown as Ctor[2],
     );
 
-    await (plugin.hooks['initialize'] as () => Promise<void>)();
-    (
-      plugin.hooks[
-        'after:aws:package:finalize:mergeCustomProviderResources'
-      ] as () => void
-    )();
+    await (plugin.hooks.initialize as () => Promise<void>)();
+    plugin.hooks['after:aws:package:finalize:mergeCustomProviderResources']();
 
     const expectedTags = [
       { Key: 'framework', Value: 'nodejs' },
@@ -67,7 +63,7 @@ describe('plugin tests', () => {
     });
     expect(resources.Logs.Properties).toEqual({ Tags: expectedTags });
     expect(resources.Policy.Properties).not.toHaveProperty('Tags');
-    expect(resources['ProjectResourceGroup']).toEqual({
+    expect(resources.ProjectResourceGroup).toEqual({
       Type: 'AWS::ResourceGroups::Group',
       Properties: {
         Name: 'simple-service-resource-group',
