@@ -82,7 +82,7 @@ class ServerlessResourceTagPlugin implements Plugin {
     const resources: CloudFormationResources =
       this.serverless.service.provider.compiledCloudFormationTemplate.Resources;
 
-    const newTags: Tag[] = Object.keys(customTags).map((key) => ({
+    const nextTags: Tag[] = Object.keys(customTags).map((key) => ({
       Key: key,
       Value: customTags[key],
     }));
@@ -91,7 +91,7 @@ class ServerlessResourceTagPlugin implements Plugin {
       this.taggableResourceTypes.has(res.Type),
     );
 
-    Object.keys(resources).forEach((resourceKey) => {
+    for (const resourceKey of Object.keys(resources)) {
       const resource = resources[resourceKey];
       if (this.taggableResourceTypes.has(resource.Type)) {
         if (!resource.Properties) {
@@ -103,18 +103,18 @@ class ServerlessResourceTagPlugin implements Plugin {
 
         const existingTags: Tag[] = resource.Properties.Tags!;
         if (!Array.isArray(existingTags)) {
-          return;
+          continue;
         }
 
         resource.Properties.Tags = [
           ...existingTags.filter(
             (existingTag) =>
-              !newTags.some((newTag) => newTag.Key === existingTag.Key),
+              !nextTags.some((nextTag) => nextTag.Key === existingTag.Key),
           ),
-          ...newTags,
+          ...nextTags,
         ];
       }
-    });
+    }
 
     resources[`ProjectResourceGroup`] = {
       Type: 'AWS::ResourceGroups::Group',
