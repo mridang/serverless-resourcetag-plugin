@@ -6,6 +6,15 @@ import ServerlessResourceTagPlugin from '../src/index.js';
 
 type Ctor = ConstructorParameters<typeof ServerlessResourceTagPlugin>;
 
+interface CloudFormationResource {
+  Type: string;
+  Properties?: object;
+}
+
+interface CloudFormationResources {
+  [logicalId: string]: CloudFormationResource;
+}
+
 describe('plugin tests', () => {
   const originalFetch = globalThis.fetch;
 
@@ -24,7 +33,7 @@ describe('plugin tests', () => {
         },
       }),
     })) as unknown as typeof fetch;
-    const resources: Record<string, { Type: string; Properties?: object }> = {
+    const resources: CloudFormationResources = {
       Fn: { Type: 'AWS::Lambda::Function', Properties: { Tags: [] } },
       Bucket: {
         Type: 'AWS::S3::Bucket',
