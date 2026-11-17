@@ -6,12 +6,27 @@ import type Serverless from 'serverless';
 
 import type Plugin from 'serverless/classes/Plugin';
 
-import type Aws from 'serverless/plugins/aws/provider/awsProvider';
-
 interface Tag {
   Key: string;
   Value: string;
 }
+
+/** A compiled resource as it can really appear: `Properties` is optional. */
+interface TemplateResource {
+  Type: string;
+  Properties?: { Tags?: Tag[]; [key: string]: unknown };
+}
+
+/** The provider fields this plugin reads, including those the Serverless typings omit. */
+interface TaggedProvider {
+  tags?: { [key: string]: string };
+  compiledCloudFormationTemplate?: {
+    Resources: { [logicalId: string]: TemplateResource };
+  };
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
 
 class ServerlessResourceTagPlugin implements Plugin {
   public readonly hooks: Plugin.Hooks = {};
@@ -39,18 +54,19 @@ class ServerlessResourceTagPlugin implements Plugin {
       const response = await fetch(
         'https://d1uauaxba7bl26.cloudfront.net/latest/gzip/CloudFormationResourceSpecification.json',
       );
-      const data = (await response.json()) as {
-        ResourceTypes: {
-          [key: string]: { Properties?: { [key: string]: unknown } };
-        };
-      };
+      const data: unknown = await response.json();
+      if (!isRecord(data) || !isRecord(data.ResourceTypes)) {
+        throw new Error('Unexpected CloudFormation resource specification');
+      }
 
       this.taggableResourceTypes = this.taggableResourceTypes.union(
         new Set(
           Object.entries(data.ResourceTypes)
             .filter(
               ([, resourceDetails]) =>
-                'Tags' in (resourceDetails.Properties ?? {}),
+                isRecord(resourceDetails) &&
+                isRecord(resourceDetails.Properties) &&
+                'Tags' in resourceDetails.Properties,
             )
             .map(([resourceType]) => resourceType),
         ),
@@ -71,22 +87,21 @@ class ServerlessResourceTagPlugin implements Plugin {
   addTagsAndResourceGroup() {
     const serviceName: string = this.serverless.service.service || 'serverless';
 
-    if (!this.serverless.service.provider.compiledCloudFormationTemplate) {
+    const provider: TaggedProvider = this.serverless.service.provider;
+    const template = provider.compiledCloudFormationTemplate;
+
+    if (!template) {
       this.logging.log.error('No compiled CloudFormation template found');
       return;
     }
 
-    // The Serverless typings omit the provider's tags, so the source is typed once here.
-    const { tags: providerTags } = this.serverless.service.provider as {
-      tags?: { [key: string]: string };
-    };
+    const { tags: providerTags } = provider;
     const customTags = {
       ...providerTags,
       'sls:meta:project': serviceName,
     };
 
-    const resources: Aws.CloudFormationResources =
-      this.serverless.service.provider.compiledCloudFormationTemplate.Resources;
+    const resources = template.Resources;
 
     const nextTags: Tag[] = Object.entries(customTags).map(([Key, Value]) => ({
       Key,
@@ -99,7 +114,7 @@ class ServerlessResourceTagPlugin implements Plugin {
 
     // eslint-disable-next-line functional/no-loop-statements -- the compiled template owned by Serverless is updated in place
     for (const resource of Object.values(resources)) {
-      const existingTags: Tag[] = resource.Properties?.Tags || [];
+      const existingTags: Tag[] = resource.Properties?.Tags ?? [];
       if (
         this.taggableResourceTypes.has(resource.Type) &&
         Array.isArray(existingTags)

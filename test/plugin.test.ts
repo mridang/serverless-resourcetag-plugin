@@ -3,8 +3,39 @@
  */
 
 import ServerlessResourceTagPlugin from '../src/index.js';
+import type Plugin from 'serverless/classes/Plugin';
 
 type Ctor = ConstructorParameters<typeof ServerlessResourceTagPlugin>;
+
+/**
+ * Builds a complete logging facade whose log methods all forward to one sink.
+ *
+ * @param sink - receives every log call
+ * @returns a logging facade with the full Serverless shape
+ */
+function createLogging(sink: (...args: unknown[]) => void): Plugin.Logging {
+  const progress: Plugin.Progress = {
+    namespace: 'test',
+    name: 'test',
+    update: sink,
+    info: sink,
+    notice: sink,
+    remove: () => undefined,
+  };
+  return {
+    log: {
+      error: sink,
+      warning: sink,
+      notice: sink,
+      info: sink,
+      debug: sink,
+      verbose: sink,
+      success: sink,
+    },
+    writeText: sink,
+    progress: { get: () => progress, create: () => progress },
+  };
+}
 
 interface CloudFormationResource {
   Type: string;
@@ -23,16 +54,15 @@ describe('plugin tests', () => {
   });
 
   it('should tag taggable resources and add the resource group', async () => {
-    globalThis.fetch = (async () => ({
-      json: async () => ({
+    globalThis.fetch = async () =>
+      Response.json({
         ResourceTypes: {
           'AWS::Lambda::Function': { Properties: { Tags: {} } },
           'AWS::S3::Bucket': { Properties: { Tags: {} } },
           'AWS::Logs::LogGroup': { Properties: { Tags: {} } },
           'AWS::IAM::Policy': { Properties: {} },
         },
-      }),
-    })) as unknown as typeof fetch;
+      });
     const resources: CloudFormationResources = {
       Fn: { Type: 'AWS::Lambda::Function', Properties: { Tags: [] } },
       Bucket: {
@@ -52,14 +82,14 @@ describe('plugin tests', () => {
       },
     };
     const noop = () => undefined;
-    const logging = { log: { notice: noop, error: noop, success: noop } };
     const plugin = new ServerlessResourceTagPlugin(
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- a full Serverless instance needs a real service load; the plugin reads only service.service and the provider's tags and template
       serverless as unknown as Ctor[0],
       {},
-      logging as unknown as Ctor[2],
+      createLogging(noop),
     );
 
-    await (plugin.hooks.initialize as () => Promise<void>)();
+    await plugin.hooks.initialize();
     plugin.hooks['after:aws:package:finalize:mergeCustomProviderResources']();
 
     const expectedTags = [
