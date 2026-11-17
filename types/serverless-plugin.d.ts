@@ -30,6 +30,7 @@ declare module 'serverless/classes/Plugin' {
 
   namespace Plugin {
     interface Hooks {
+      // eslint-disable-next-line tslop/no-unknown-returns -- mirrors the untyped contract of the Serverless Framework
       [event: string]: (...rest: unknown[]) => unknown;
     }
 
@@ -61,6 +62,7 @@ declare module 'serverless/classes/Plugin' {
       };
     }
 
+    // eslint-disable-next-line tslop/no-unknown-returns -- mirrors the untyped contract of the Serverless Framework
     type VariableResolver = (variableSource: string) => Promise<unknown>;
 
     interface VariableResolvers {
@@ -75,6 +77,7 @@ declare module 'serverless/classes/Plugin' {
 
     type ConfigurationVariablesSource = (
       variableSource: unknown,
+      // eslint-disable-next-line tslop/no-unknown-returns -- mirrors the untyped contract of the Serverless Framework
     ) => Promise<unknown>;
 
     interface ConfigurationVariablesSources {
@@ -121,17 +124,6 @@ declare module 'serverless/classes/Plugin' {
   }
 
   export default Plugin;
-  export type Hooks = Plugin.Hooks;
-  export type Commands = Plugin.Commands;
-  export type VariableResolver = Plugin.VariableResolver;
-  export type VariableResolvers = Plugin.VariableResolvers;
-  export type ConfigurationVariablesSource =
-    Plugin.ConfigurationVariablesSource;
-  export type ConfigurationVariablesSources =
-    Plugin.ConfigurationVariablesSources;
-  export type Logging = Plugin.Logging;
-  export type Progress = Plugin.Progress;
-  export type PluginStatic = Plugin.PluginStatic;
 }
 
 declare module 'serverless/plugins/aws/provider/awsProvider' {
@@ -153,6 +145,4 @@ declare module 'serverless/plugins/aws/provider/awsProvider' {
   }
 
   export default Aws;
-  export type CloudFormationResource = Aws.CloudFormationResource;
-  export type CloudFormationResources = Aws.CloudFormationResources;
 }

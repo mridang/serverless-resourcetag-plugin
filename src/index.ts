@@ -4,10 +4,9 @@
 
 import type Serverless from 'serverless';
 
-import type { Logging } from 'serverless/classes/Plugin';
 import type Plugin from 'serverless/classes/Plugin';
 
-import type { CloudFormationResources } from 'serverless/plugins/aws/provider/awsProvider';
+import type Aws from 'serverless/plugins/aws/provider/awsProvider';
 
 interface Tag {
   Key: string;
@@ -17,12 +16,12 @@ interface Tag {
 class ServerlessResourceTagPlugin implements Plugin {
   public readonly hooks: Plugin.Hooks = {};
   public readonly name: string = 'serverless-resourcetag-plugin';
-  private readonly taggableResourceTypes = new Set<string>();
+  private taggableResourceTypes = new Set<string>();
 
   constructor(
     private readonly serverless: Serverless,
     private readonly _options: Serverless.Options,
-    private readonly logging: Logging,
+    private readonly logging: Plugin.Logging,
   ) {
     this.hooks = {
       initialize: this.initialize.bind(this),
@@ -46,13 +45,16 @@ class ServerlessResourceTagPlugin implements Plugin {
         };
       };
 
-      for (const [resourceType, resourceDetails] of Object.entries(
-        data.ResourceTypes,
-      )) {
-        if ('Tags' in (resourceDetails.Properties || {})) {
-          this.taggableResourceTypes.add(resourceType);
-        }
-      }
+      this.taggableResourceTypes = this.taggableResourceTypes.union(
+        new Set(
+          Object.entries(data.ResourceTypes)
+            .filter(
+              ([, resourceDetails]) =>
+                'Tags' in (resourceDetails.Properties ?? {}),
+            )
+            .map(([resourceType]) => resourceType),
+        ),
+      );
 
       this.logging.log.notice('Loaded taggable resource types');
     } catch (error: unknown) {
@@ -78,48 +80,45 @@ class ServerlessResourceTagPlugin implements Plugin {
     const { tags: providerTags } = this.serverless.service.provider as {
       tags?: { [key: string]: string };
     };
-    const customTags: { [key: string]: string } = {
+    const customTags = {
       ...providerTags,
       'sls:meta:project': serviceName,
     };
 
-    const resources: CloudFormationResources =
+    const resources: Aws.CloudFormationResources =
       this.serverless.service.provider.compiledCloudFormationTemplate.Resources;
 
-    const nextTags: Tag[] = Object.keys(customTags).map((key) => ({
-      Key: key,
-      Value: customTags[key],
+    const nextTags: Tag[] = Object.entries(customTags).map(([Key, Value]) => ({
+      Key,
+      Value,
     }));
 
     const resCnt = Object.values(resources).filter((res) =>
       this.taggableResourceTypes.has(res.Type),
     );
 
-    for (const resourceKey of Object.keys(resources)) {
-      const resource = resources[resourceKey];
-      if (this.taggableResourceTypes.has(resource.Type)) {
-        if (!resource.Properties) {
-          resource.Properties = {};
-        }
-        if (!resource.Properties.Tags) {
-          resource.Properties.Tags = [];
-        }
-
-        const existingTags: Tag[] = resource.Properties.Tags;
-        if (!Array.isArray(existingTags)) {
-          continue;
-        }
-
-        resource.Properties.Tags = [
-          ...existingTags.filter(
-            (existingTag) =>
-              !nextTags.some((nextTag) => nextTag.Key === existingTag.Key),
-          ),
-          ...nextTags,
-        ];
+    // eslint-disable-next-line functional/no-loop-statements -- the compiled template owned by Serverless is updated in place
+    for (const resource of Object.values(resources)) {
+      const existingTags: Tag[] = resource.Properties?.Tags || [];
+      if (
+        this.taggableResourceTypes.has(resource.Type) &&
+        Array.isArray(existingTags)
+      ) {
+        // eslint-disable-next-line functional/immutable-data -- the compiled template owned by Serverless is updated in place
+        resource.Properties = {
+          ...resource.Properties,
+          Tags: [
+            ...existingTags.filter(
+              (existingTag) =>
+                !nextTags.some((nextTag) => nextTag.Key === existingTag.Key),
+            ),
+            ...nextTags,
+          ],
+        };
       }
     }
 
+    // eslint-disable-next-line functional/immutable-data -- the compiled template owned by Serverless is updated in place
     resources.ProjectResourceGroup = {
       Type: 'AWS::ResourceGroups::Group',
       Properties: {
